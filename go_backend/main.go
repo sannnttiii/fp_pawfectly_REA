@@ -20,6 +20,22 @@ import (
 
 var conn *pgx.Conn
 
+// Helper functions for error handling
+func handleNotFound(w http.ResponseWriter, message string) {
+	http.Error(w, message, http.StatusNotFound)
+	log.Printf("404 Not Found: %s\n", message)
+}
+
+func handleInvalidRequest(w http.ResponseWriter, message string) {
+	http.Error(w, message, http.StatusBadRequest)
+	log.Printf("400 Invalid Request: %s\n", message)
+}
+
+func handleServerError(w http.ResponseWriter, err error, message string) {
+	http.Error(w, message, http.StatusInternalServerError)
+	log.Printf("500 Server Error: %v, Message: %s\n", err, message)
+}
+
 // Encrypt password dengan bcrypt
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -79,14 +95,14 @@ type User struct {
 func signupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid request payload")
 		return
 	}
 
@@ -101,7 +117,7 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 	err = conn.QueryRow(context.Background(), "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id", user.Email, encodedString).Scan(&userID)
 	if err != nil {
 		log.Printf("Error executing query: %v\n", err)
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to create user")
 		return
 	}
 
@@ -112,14 +128,14 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 
 func setPetTypeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid request payload")
 		return
 	}
 
@@ -132,7 +148,7 @@ func setPetTypeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Error executing query: %v\n", err)
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to create user")
 		return
 	}
 
@@ -143,14 +159,14 @@ func setPetTypeHandler(w http.ResponseWriter, r *http.Request) {
 
 func setProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	err := r.ParseMultipartForm(10 << 20) // Limit your max input length to 10 MB
 	if err != nil {
 		fmt.Println("Error parsing form data:", err)
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid form data")
 		return
 	}
 
@@ -173,7 +189,7 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 		f, err := os.Create(filePath)
 		if err != nil {
 			fmt.Println("Error creating file:", err)
-			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			handleServerError(w, err, "Failed to save image")
 			return
 		}
 		defer f.Close()
@@ -184,7 +200,7 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 	age, err := strconv.Atoi(r.FormValue("age"))
 	if err != nil {
 		fmt.Println("Error converting age:", err)
-		http.Error(w, "Invalid age value", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid age value")
 		return
 	}
 	user.Age = age
@@ -193,7 +209,7 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
 		fmt.Println("Error converting id:", err)
-		http.Error(w, "Invalid id value", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid id value")
 		return
 	}
 	user.ID = id
@@ -204,7 +220,7 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 		user.PetBreeds, user.Gender, user.Name, user.Age, user.City, user.Bio, user.PetImage, user.ID)
 	if err != nil {
 		fmt.Println("Database update error:", err)
-		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed update profile")
 		return
 	}
 
@@ -217,14 +233,14 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		handleInvalidRequest(w, "Invalid request payload")
 		return
 	}
 
@@ -236,13 +252,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	err = conn.QueryRow(context.Background(), "SELECT id, password, pet_type, image_pet FROM users WHERE email=$1", user.Email).Scan(&userID, &storedHash, &petType, &imagePet)
 	if err != nil {
 		log.Printf("Error fetching user: %v\n", err)
-		http.Error(w, "User not found", http.StatusUnauthorized)
+		handleNotFound(w, "User not found")
 		return
 	}
 
 	if !CheckPasswordHash(user.Password, storedHash) {
 		log.Println("Invalid password")
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		handleInvalidRequest(w, "Invalid credentials")
 		return
 	}
 
@@ -254,7 +270,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func fetchPetsHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("id")
 	if userID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "User ID is required")
 		return
 	}
 
@@ -273,7 +289,7 @@ func fetchPetsHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := conn.Query(context.Background(), query, userID)
 	if err != nil {
-		http.Error(w, `{"error": "Unable to fetch pets"}`, http.StatusInternalServerError)
+		handleServerError(w, err, "Unable to fetch pets")
 		return
 	}
 	defer rows.Close()
@@ -286,7 +302,7 @@ func fetchPetsHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err := rows.Scan(&id, &petType, &name, &gender, &age, &petBreeds, &imagePet, &city, &bio); err != nil {
 			log.Printf("Error scanning row: %v", err)
-			http.Error(w, `{"error": "Error scanning row"}`, http.StatusInternalServerError)
+			handleServerError(w, err, "Error scanning row")
 			return
 		}
 
@@ -306,25 +322,27 @@ func fetchPetsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if rows.Err() != nil {
 		log.Printf("Error iterating rows: %v", rows.Err())
-		http.Error(w, `{"error": "Error iterating rows"}`, http.StatusInternalServerError)
+		handleServerError(w, err, "Error iterating rows")
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(pets); err != nil {
-		http.Error(w, `{"error": "Error encoding JSON"}`, http.StatusInternalServerError)
+		handleServerError(w, err, "Error encoding JSON")
+
 	}
 }
 
 func fetchProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	userID := r.URL.Query().Get("id")
 	if userID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "User ID is required")
 		return
 	}
 
@@ -334,25 +352,25 @@ func fetchProfile(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Printf("Error fetching user: %v\n", err)
-		http.Error(w, "User not found", http.StatusNotFound)
+		handleNotFound(w, "User not found")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(user); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to encode response")
 	}
 }
 
 func deleteProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	userID := r.URL.Query().Get("id")
 	if userID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "User ID is required")
 		return
 	}
 
@@ -360,7 +378,7 @@ func deleteProfile(w http.ResponseWriter, r *http.Request) {
 	_, err := conn.Exec(context.Background(), "DELETE FROM users WHERE id = $1", userID)
 	if err != nil {
 		log.Printf("Error deleting user: %v\n", err)
-		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to delete user")
 		return
 	}
 
@@ -371,25 +389,25 @@ func deleteProfile(w http.ResponseWriter, r *http.Request) {
 
 func setMatch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	idLogin := r.URL.Query().Get("userid1")
 	if idLogin == "" {
-		http.Error(w, "userid1 is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "userid1 is required")
 		return
 	}
 
 	idChoosen := r.URL.Query().Get("userid2")
 	if idChoosen == "" {
-		http.Error(w, "userid2 is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "userid2 is required")
 		return
 	}
 
 	status := r.URL.Query().Get("status")
 	if status == "" {
-		http.Error(w, "Status is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "status is required")
 		return
 	}
 
@@ -416,7 +434,7 @@ func setMatch(w http.ResponseWriter, r *http.Request) {
 				`, idLogin, idChoosen).Scan(&matchesId)
 				if err != nil {
 					log.Printf("Error inserting new match: %v\n", err)
-					http.Error(w, "Failed to insert new match", http.StatusInternalServerError)
+					handleServerError(w, err, "Failed to insert new match")
 					return
 				}
 				respons = "pending"
@@ -431,14 +449,14 @@ func setMatch(w http.ResponseWriter, r *http.Request) {
 				`, idLogin, idChoosen).Scan(&matchesId)
 				if err != nil {
 					log.Printf("Error inserting new match: %v\n", err)
-					http.Error(w, "Failed to insert new match", http.StatusInternalServerError)
+					handleServerError(w, err, "Failed to insert new match")
 					return
 				}
 				respons = "unmatch"
 			}
 		} else {
 			log.Printf("Error querying match: %v\n", err)
-			http.Error(w, "Failed to check match", http.StatusInternalServerError)
+			handleServerError(w, err, "Failed to check match")
 			return
 		}
 	} else {
@@ -454,7 +472,7 @@ func setMatch(w http.ResponseWriter, r *http.Request) {
 				`, idLogin, idChoosen).Scan(&matchesId)
 				if err != nil {
 					log.Printf("Error updating match to 'match': %v\n", err)
-					http.Error(w, "Failed to update match", http.StatusInternalServerError)
+					handleServerError(w, err, "Failed to update match")
 					return
 				}
 				respons = "match"
@@ -470,7 +488,7 @@ func setMatch(w http.ResponseWriter, r *http.Request) {
 				`, idLogin, idChoosen).Scan(&matchesId)
 				if err != nil {
 					log.Printf("Error updating match to 'unmatch': %v\n", err)
-					http.Error(w, "Failed to update match", http.StatusInternalServerError)
+					handleServerError(w, err, "Failed to update match")
 					return
 				}
 				respons = "unmatch"
@@ -485,7 +503,7 @@ func setMatch(w http.ResponseWriter, r *http.Request) {
 
 func sendMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
@@ -495,7 +513,7 @@ func sendMessage(w http.ResponseWriter, r *http.Request) {
 		SenderID  int    `json:"senderId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		handleInvalidRequest(w, "Bad Request")
 		return
 	}
 
@@ -506,7 +524,7 @@ func sendMessage(w http.ResponseWriter, r *http.Request) {
 	`, req.MatchesID, req.SenderID, req.Message)
 	if err != nil {
 		log.Printf("Error inserting message: %v\n", err)
-		http.Error(w, "Failed to insert message", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to insert message")
 		return
 	}
 
@@ -524,13 +542,13 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	matchesId := r.URL.Query().Get("matchesId")
 	if matchesId == "" {
-		http.Error(w, "matchesId is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "matchesId is required")
 		return
 	}
 
@@ -542,7 +560,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	`, matchesId)
 	if err != nil {
 		log.Printf("Error querying messages: %v\n", err)
-		http.Error(w, "Failed to retrieve messages", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to retrieve messages")
 		return
 	}
 	defer rows.Close()
@@ -553,7 +571,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 		var m Message
 		if err := rows.Scan(&m.ID, &m.Message, &m.SenderID, &m.CreatedAt); err != nil {
 			log.Printf("Error scanning message: %v\n", err)
-			http.Error(w, "Failed to scan messages", http.StatusInternalServerError)
+			handleServerError(w, err, "Failed to scan messages")
 			return
 		}
 		messages = append(messages, m)
@@ -561,7 +579,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 
 	if err := rows.Err(); err != nil {
 		log.Printf("Error iterating messages: %v\n", err)
-		http.Error(w, "Error retrieving messages", http.StatusInternalServerError)
+		handleServerError(w, err, "Error retrieving messages")
 		return
 	}
 
@@ -570,7 +588,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 		"messages": messages,
 	}); err != nil {
 		log.Printf("Error encoding response: %v\n", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to encode response")
 	}
 }
 
@@ -586,13 +604,13 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleInvalidRequest(w, "Method not allowed")
 		return
 	}
 
 	userID := r.URL.Query().Get("userID")
 	if userID == "" {
-		http.Error(w, "userID is required", http.StatusBadRequest)
+		handleInvalidRequest(w, "userID is required")
 		return
 	}
 
@@ -608,7 +626,7 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 	`, userID)
 	if err != nil {
 		log.Printf("Error querying messages: %v\n", err)
-		http.Error(w, "Failed to retrieve messages", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to retrieve messages")
 		return
 	}
 	defer rows.Close()
@@ -619,7 +637,7 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 		var m ListMessage
 		if err := rows.Scan(&m.UserID, &m.NameUserChoosen, &m.AgeUserChoosen, &m.ProfilePic, &m.MatchesID, &m.LastMessage, &m.LastMessageTime); err != nil {
 			log.Printf("Error scanning message: %v\n", err)
-			http.Error(w, "Failed to scan messages", http.StatusInternalServerError)
+			handleServerError(w, err, "Failed to scan messages")
 			return
 		}
 		messages = append(messages, m)
@@ -627,7 +645,7 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 
 	if err := rows.Err(); err != nil {
 		log.Printf("Error iterating messages: %v\n", err)
-		http.Error(w, "Error retrieving messages", http.StatusInternalServerError)
+		handleServerError(w, err, "Error retrieving messages")
 		return
 	}
 
@@ -636,7 +654,7 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 		"messages": messages,
 	}); err != nil {
 		log.Printf("Error encoding response: %v\n", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		handleServerError(w, err, "Failed to encode response")
 	}
 }
 
