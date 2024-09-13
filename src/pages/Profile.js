@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 function Profile() {
+  const [isLogin, setIsLogin] = useState(
+    localStorage.getItem("isLogin") === "true"
+  );
+
   const [petTypeIsDog, setPetTypeIsDog] = useState(true);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -59,6 +63,7 @@ function Profile() {
     // update foto kalau diganti aja
     if (image) {
       formData.append("image", image);
+      localStorage.setItem("imagePet", "0-" + image.name);
     }
     formData.append("pet_breeds", petBreeds);
     formData.append("gender", gender);
@@ -76,7 +81,6 @@ function Profile() {
       if (response.ok) {
         const data = await response.json();
         console.log(data);
-        localStorage.setItem("imagePet", data.image_pet);
         navigate("/homepage");
         console.log("Update profile success");
       } else {
@@ -110,6 +114,26 @@ function Profile() {
       setCity(value);
     } else if (name === "bio") {
       setBio(value);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8082/api/deleteProfile?id=${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (response.ok) {
+        localStorage.clear();
+        navigate("/");
+        console.log("Profile deleted successfully");
+      } else {
+        console.error("Delete failed");
+      }
+    } catch (error) {
+      console.error("Error deleting profile:", error);
     }
   };
 
@@ -261,6 +285,15 @@ function Profile() {
                 >
                   Save
                 </button>
+                {isLogin && (
+                  <button
+                    className="w-full bg-red-700 text-white text-lg font-bold py-3 rounded-xl hover:bg-red-700"
+                    type="button"
+                    onClick={handleDeleteProfile}
+                  >
+                    Delete Profile
+                  </button>
+                )}
               </div>
             </div>
           </form>

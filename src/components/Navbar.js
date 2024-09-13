@@ -9,21 +9,6 @@ export default function Navbar() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [imagePet, setImagePet] = useState("");
-
-  // const toggleLogin = () => {
-  //   console.log(JSON.parse(localStorage.getItem("isLogin")));
-  //   // const newIsLogin = !isLogin;
-  //   // setIsLogin(newIsLogin);
-
-  //   // set value in localStorage
-  //   if (newIsLogin) {
-  //     localStorage.setItem("isLogin", JSON.stringify("isLogin"));
-  //   } else {
-  //     localStorage.setItem("isLogin", JSON.stringify("notLogin"));
-  //   }
-  //   console.log(JSON.parse(localStorage.getItem("isLogin")));
-  // };
-
   const navigate = useNavigate();
   const handleLogout = () => {
     setIsLogin(false);
@@ -86,10 +71,7 @@ export default function Navbar() {
         </div>
       ) : (
         <Link to={"/login"}>
-          <button
-            className="flex items-center justify-center bg-yellow-500 hover:bg-yellow-700 transform py-2 px-6 rounded-xl text-white font-semibold text-lg border-1 border-gray-100 w-full"
-            // onClick={toggleLogin}
-          >
+          <button className="flex items-center justify-center bg-yellow-500 hover:bg-yellow-700 transform py-2 px-6 rounded-xl text-white font-semibold text-lg border-1 border-gray-100 w-full">
             Login
           </button>
         </Link>

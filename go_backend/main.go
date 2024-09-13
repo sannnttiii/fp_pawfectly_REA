@@ -344,6 +344,31 @@ func fetchProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func deleteProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("id")
+	if userID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Execute the delete query
+	_, err := conn.Exec(context.Background(), "DELETE FROM users WHERE id = $1", userID)
+	if err != nil {
+		log.Printf("Error deleting user: %v\n", err)
+		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message": "User deleted successfully"}`))
+}
+
 func setMatch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -617,8 +642,7 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var err error
-	// conn, err = pgx.Connect(context.Background(), "postgres://postgres:postgres@localhost:5432/pawfectly")
-	conn, err = pgx.Connect(context.Background(), "postgres://default:VEaAruPg7fk9@ep-spring-lab-a1ne9eij.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require")
+	conn, err = pgx.Connect(context.Background(), "postgres://postgres:postgres@localhost:5432/pawfectly")
 
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
@@ -631,6 +655,7 @@ func main() {
 	http.HandleFunc("/api/signup", signupHandler)
 	http.HandleFunc("/api/setPetType", setPetTypeHandler)
 	http.HandleFunc("/api/setProfile", setProfile)
+	http.HandleFunc("/api/deleteProfile", deleteProfile)
 	http.HandleFunc("/api/login", loginHandler)
 	http.HandleFunc("/api/pets", fetchPetsHandler)
 	http.HandleFunc("/api/getProfile", fetchProfile)
@@ -640,9 +665,8 @@ func main() {
 	http.HandleFunc("/api/listRoom", getListMessages)
 	http.HandleFunc("/", handler)
 	c := cors.New(cors.Options{
-		// AllowedOrigins:   []string{"http://localhost:3000"},
-		AllowedOrigins:   []string{"https://pawfectly-beta.vercel.app"},
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "DELETE"},
 		AllowedHeaders:   []string{"Content-Type"},
 		AllowCredentials: true,
 	})
