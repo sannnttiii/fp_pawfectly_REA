@@ -28,13 +28,31 @@ export default function CardPet(pet) {
         if (data.respons === "match") {
           setMatchesId(data.matchesId);
           setModal(!modal);
+
+          const response = await fetch(
+            `http://localhost:8082/api/sendMessage`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: "Hi! nice to match you!",
+                matchesId: data.matchesId,
+                senderId: idLogin,
+              }),
+            }
+          );
+          const result = await response.json();
+          console.log(result);
+        } else {
+          window.location.reload();
         }
       } catch (error) {
         console.error("Error fetching pet data:", error);
       }
     };
     setMatch();
-    window.location.reload();
     if (modal) {
       setModal(!modal);
     }

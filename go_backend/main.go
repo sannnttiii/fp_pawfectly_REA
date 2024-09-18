@@ -614,16 +614,30 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := conn.Query(context.Background(), `
-	SELECT u.id AS user_id, u.name, u.age, u.image_pet AS image_pet, m.id AS match_id, msg.message, msg.created_at
+	// rows, err := conn.Query(context.Background(), `
+	// SELECT u.id AS user_id, u.name, u.age, u.image_pet AS image_pet, m.id AS match_id, msg.message, msg.created_at
+	// FROM matches m
+	// INNER JOIN users u
+	// ON (m.userid1 = u.id OR m.userid2 = u.id) AND u.id <> $1
+	// LEFT JOIN messages msg
+	// ON msg.matches_id = m.id
+	// ORDER BY msg.created_at DESC
+	// LIMIT 1;
+	// `, userID)
+	rows, err := conn.Query(context.Background(), `SELECT u.id AS user_id, u.name, u.age, u.image_pet AS image_pet, m.id AS match_id, msg.message, msg.created_at
 	FROM matches m
-	INNER JOIN users u
-	ON (m.userid1 = u.id OR m.userid2 = u.id) AND u.id <> $1
-	LEFT JOIN messages msg
-	ON msg.matches_id = m.id
-	ORDER BY msg.created_at DESC
-	LIMIT 1;
+	LEFT JOIN users u
+	ON (CASE WHEN m.userid1 = $1 THEN m.userid2 ELSE m.userid1 END) = u.id
+	LEFT JOIN LATERAL (
+		SELECT id, message, created_at
+		FROM messages
+		WHERE matches_id = m.id 
+		ORDER BY created_at DESC
+		LIMIT 1
+	) msg ON true
+	WHERE status='match' and m.userid1 = $1 OR status='match' and m.userid2 = $1 ;
 	`, userID)
+
 	if err != nil {
 		log.Printf("Error querying messages: %v\n", err)
 		handleServerError(w, err, "Failed to retrieve messages")
