@@ -20,7 +20,7 @@ import (
 
 var conn *pgx.Conn
 
-// Helper functions for error handling
+// Error Handling
 func handleNotFound(w http.ResponseWriter, message string) {
 	http.Error(w, message, http.StatusNotFound)
 	log.Printf("404 Not Found: %s\n", message)
@@ -92,7 +92,7 @@ type User struct {
 	Bio       string `json:"bio"`
 }
 
-func signupHandler(w http.ResponseWriter, r *http.Request) {
+func signupHandler(conn *pgx.Conn, w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		handleInvalidRequest(w, "Method not allowed")
@@ -163,7 +163,7 @@ func setProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := r.ParseMultipartForm(10 << 20) // Limit your max input length to 10 MB
+	err := r.ParseMultipartForm(10 << 20) // Limit max input length to 10 MB
 	if err != nil {
 		fmt.Println("Error parsing form data:", err)
 		handleInvalidRequest(w, "Invalid form data")
@@ -267,7 +267,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func fetchPetsHandler(w http.ResponseWriter, r *http.Request) {
+func fetchPetsHandler(conn *pgx.Conn, w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("id")
 	if userID == "" {
 		handleInvalidRequest(w, "User ID is required")
@@ -374,7 +374,6 @@ func deleteProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Execute the delete query
 	_, err := conn.Exec(context.Background(), "DELETE FROM users WHERE id = $1", userID)
 	if err != nil {
 		log.Printf("Error deleting user: %v\n", err)
@@ -614,16 +613,6 @@ func getListMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// rows, err := conn.Query(context.Background(), `
-	// SELECT u.id AS user_id, u.name, u.age, u.image_pet AS image_pet, m.id AS match_id, msg.message, msg.created_at
-	// FROM matches m
-	// INNER JOIN users u
-	// ON (m.userid1 = u.id OR m.userid2 = u.id) AND u.id <> $1
-	// LEFT JOIN messages msg
-	// ON msg.matches_id = m.id
-	// ORDER BY msg.created_at DESC
-	// LIMIT 1;
-	// `, userID)
 	rows, err := conn.Query(context.Background(), `SELECT u.id AS user_id, u.name, u.age, u.image_pet AS image_pet, m.id AS match_id, msg.message, msg.created_at
 	FROM matches m
 	LEFT JOIN users u
@@ -684,12 +673,16 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./images/profpic"))
 	http.Handle("/images/profpic/", http.StripPrefix("/images/profpic/", fileServer))
 
-	http.HandleFunc("/api/signup", signupHandler)
+	http.HandleFunc("/api/signup", func(w http.ResponseWriter, r *http.Request) {
+		signupHandler(conn, w, r)
+	})
 	http.HandleFunc("/api/setPetType", setPetTypeHandler)
 	http.HandleFunc("/api/setProfile", setProfile)
 	http.HandleFunc("/api/deleteProfile", deleteProfile)
 	http.HandleFunc("/api/login", loginHandler)
-	http.HandleFunc("/api/pets", fetchPetsHandler)
+	http.HandleFunc("/api/pets", func(w http.ResponseWriter, r *http.Request) {
+		fetchPetsHandler(conn, w, r)
+	})
 	http.HandleFunc("/api/getProfile", fetchProfile)
 	http.HandleFunc("/api/setMatch", setMatch)
 	http.HandleFunc("/api/sendMessage", sendMessage)
@@ -703,7 +696,6 @@ func main() {
 		AllowCredentials: true,
 	})
 
-	// Wrap your handlers with the CORS middleware
 	handler := c.Handler(http.DefaultServeMux)
 
 	fmt.Println("Server is running on port 8082...")
