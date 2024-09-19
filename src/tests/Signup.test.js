@@ -3,16 +3,13 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter as Router } from "react-router-dom";
 import Signup from "../pages/Signup";
 
-// Mock the useNavigate hook from react-router-dom
 const mockNavigate = jest.fn();
 
-// Mock the react-router-dom module
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
 }));
 
-// Mock the fetch function
 global.fetch = jest.fn();
 
 describe("Signup Component", () => {
@@ -105,36 +102,4 @@ describe("Signup Component", () => {
       expect(localStorage.getItem("userID")).toBe("12345");
     });
   });
-
-  // test("handles signup failure", async () => {
-  //   fetch.mockImplementationOnce(() =>
-  //     Promise.resolve({
-  //       ok: false,
-  //       json: () => Promise.reject("Signup failed"),
-  //     })
-  //   );
-
-  //   render(
-  //     <Router>
-  //       <Signup />
-  //     </Router>
-  //   );
-
-  //   // fireEvent.change(screen.getByLabelText(/email/i), {
-  //   //   target: { value: "test@example.com" },
-  //   // });
-  //   // fireEvent.change(screen.getByLabelText(/password/i), {
-  //   //   target: { value: "password123" },
-  //   // });
-  //   // fireEvent.change(screen.getByLabelText(/confirm password/i), {
-  //   //   target: { value: "password123" },
-  //   // });
-
-  //   fireEvent.click(screen.getByText(/sign up/i));
-
-  //   await waitFor(() => {
-  //     expect(fetch).toHaveBeenCalled();
-  //     // Optionally check if any specific error handling is displayed
-  //   });
-  // });
 });
