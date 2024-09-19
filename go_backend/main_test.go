@@ -103,7 +103,7 @@ func TestFetchPetsHandler(t *testing.T) {
 	actualPetsCount := len(response)
 
 	expectedPetsCount := 2 // sesuaikan dengan jumlah test data
-	assert.Equal(t, actualPetsCount, expectedPetsCount, "Expected correct number of pets in response")
+	assert.Equal(t, expectedPetsCount, actualPetsCount, "Expected correct number of pets in response")
 
 	for _, pet := range response {
 		// tidak termasuk user dengan email test@gmail.com

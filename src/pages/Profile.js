@@ -153,6 +153,7 @@ function Profile() {
               </label>
               {imagePreview && (
                 <img
+                  id="petImage"
                   src={imagePreview}
                   alt="Preview"
                   className="mb-4 w-1/2 object-cover border-2 border-gray-100 rounded-xl"
@@ -167,7 +168,7 @@ function Profile() {
                 onChange={handleChange}
               />
 
-              <label className="text-lg font-medium" htmlFor="petType">
+              <label className="text-lg font-medium" htmlFor="petBreeds">
                 Pet Breeds
               </label>
 
@@ -236,31 +237,42 @@ function Profile() {
                 <option value="female">Female</option>
               </select>
 
-              <label className="text-lg font-medium">Name</label>
+              <label className="text-lg font-medium" htmlFor="name">
+                Name
+              </label>
               <input
                 className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
                 type="text"
                 placeholder="Enter your pet's name"
+                id="name"
                 name="name"
                 value={name}
                 onChange={handleChange}
               />
               <div>
-                <label className="text-lg font-medium">Age</label>
+                <label className="text-lg font-medium" htmlFor="age">
+                  {" "}
+                  Age
+                </label>
                 <input
                   className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
                   type="text"
                   placeholder="Enter your pet's age"
                   name="age"
+                  id="age"
                   value={age}
                   onChange={handleChange}
                 />
               </div>
               <div>
-                <label className="text-lg font-medium">City</label>
+                <label className="text-lg font-medium" htmlFor="city">
+                  {" "}
+                  City
+                </label>
                 <input
                   className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
                   type="text"
+                  id="city"
                   name="city"
                   placeholder="Enter the city your pet's live"
                   value={city}
@@ -268,7 +280,9 @@ function Profile() {
                 />
               </div>
               <div>
-                <label className="text-lg font-medium">About me</label>
+                <label className="text-lg font-medium" htmlFor="bio">
+                  About me
+                </label>
                 <textarea
                   id="bio"
                   name="bio"

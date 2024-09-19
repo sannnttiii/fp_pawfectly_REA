@@ -63,9 +63,12 @@ export default function Signup() {
           </p>
           <form onSubmit={handleSignup}>
             <div className="mt-8">
-              <label className="text-lg font-medium">Email</label>
+              <label className="text-lg font-medium" htmlFor="email">
+                Email
+              </label>
               <input
                 className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
+                id="email"
                 name="email"
                 type="email"
                 placeholder="Enter your email"
@@ -75,9 +78,12 @@ export default function Signup() {
               />
             </div>
             <div className="mt-1">
-              <label className="text-lg font-medium">Password</label>
+              <label className="text-lg font-medium" htmlFor="password">
+                Password
+              </label>
               <input
                 className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
+                id="password"
                 name="password"
                 type="password"
                 placeholder="Enter your password"
@@ -87,11 +93,15 @@ export default function Signup() {
               />
             </div>
             <div className="mt-1">
-              <label className="text-lg font-medium">Confirm Password</label>
+              <label className="text-lg font-medium" htmlFor="confirmPassword">
+                {" "}
+                Confirm Password
+              </label>
               <input
                 className="w-full border-2 border-gray-100 rounded-xl p-4 mt-1 bg-transparent"
                 type="password"
                 name="confirmPassword"
+                id="confirmPassword"
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={handleChange}
